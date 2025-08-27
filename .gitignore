@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Production builds
+dist/
+build/
+
+# Logs
+*.log
+logs/
+backend/logs/*.log
+
+# Vite cache and temporary files
+node_modules/.vite/deps_temp_*/
+.vite/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# PM2 files
+.pm2/
+
+# Database
+*.db-journal
