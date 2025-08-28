@@ -293,7 +293,7 @@ const Boardroom = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+  <div className="h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="flex items-center justify-between p-4">
@@ -323,9 +323,9 @@ const Boardroom = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-0">
         {/* Sidebar - Advisors */}
-        <div className="w-80 border-r border-border bg-muted/30 p-4">
+        <div className="w-80 border-r border-border bg-muted/30 p-4 flex-shrink-0 flex flex-col h-full overflow-hidden">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
@@ -445,9 +445,9 @@ const Boardroom = () => {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0 h-full">
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
             {messages.map((message) => (
               <div key={message.id} className="flex gap-3">
                 <Avatar className="h-8 w-8">
