@@ -441,17 +441,6 @@ const Boardroom = () => {
           </div>
 
           <Separator className="my-4" />
-          {/* Persistent Summary Button */}
-          <div className="flex justify-end mb-2">
-            <ConversationSummaryDialog
-              conversationId={currentConversationId || ""}
-              conversationTitle={board?.name ? `${board.name} Discussion` : "Boardroom Discussion"}
-              boardName={board?.name || ""}
-              messageCount={messages.length}
-              participants={board?.personas?.map(p => p.name) || []}
-              forceButtonLabel="View & Export Summary"
-            />
-          </div>
         </div>
 
         {/* Main Chat Area */}

@@ -791,6 +791,7 @@ export const generateAIResponse = async (req, res) => {
       }
     });
 
+
     // Get conversation context (including the newly saved user message)
     let conversationHistory = [];
     const messages = await prisma.message.findMany({
@@ -809,6 +810,26 @@ export const generateAIResponse = async (req, res) => {
         ? msg.content 
         : `${msg.persona?.name || 'Advisor'}: ${msg.content}`
     }));
+
+    // Generate a summary of the conversation so far
+    let conversationSummary = '';
+    try {
+      const summaryPrompt = `Please provide a concise summary of the following conversation so far. Focus on key points, decisions, and recommendations.\n\nConversation:\n${conversationHistory.map(m => (m.role === 'user' ? 'User: ' : '') + m.content).join('\n')}`;
+      const openai = getOpenAI();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are an expert executive assistant specializing in meeting summaries. Provide a clear, concise summary of the conversation so far." },
+          { role: "user", content: summaryPrompt }
+        ],
+        max_tokens: 300,
+        temperature: 0.3
+      });
+      conversationSummary = completion.choices[0]?.message?.content || '';
+    } catch (err) {
+      console.error('Failed to generate conversation summary for advisor context:', err);
+      conversationSummary = '';
+    }
 
     // Deduplicate boardPersonas by persona ID to prevent duplicate advisor responses
     const personaIdSet = new Set();
@@ -836,15 +857,18 @@ export const generateAIResponse = async (req, res) => {
     for (const boardPersona of personasToRespond) {
       const persona = boardPersona.persona;
       
-      // Create persona-specific system prompt
-      const systemPrompt = `You are ${persona.name}, ${persona.role}. 
-        ${persona.description || ''}
-        
-        Your personality: ${persona.personality || persona.mindset || 'Professional and helpful'}
-        Your expertise: ${persona.expertise || persona.role}
-        
-        Respond as this persona would, staying in character. Keep responses concise (2-3 sentences) and actionable. 
-        Focus on insights relevant to your expertise area.`;
+      // Create persona-specific system prompt, including the conversation summary
+      const systemPrompt = `You are ${persona.name}, ${persona.role}.
+${persona.description || ''}
+
+Your personality: ${persona.personality || persona.mindset || 'Professional and helpful'}
+Your expertise: ${persona.expertise || persona.role}
+
+Here is a summary of the conversation so far:
+${conversationSummary}
+
+Respond as this persona would, staying in character. Keep responses concise (2-3 sentences) and actionable.
+Focus on insights relevant to your expertise area.`;
 
       try {
         const openai = getOpenAI();
