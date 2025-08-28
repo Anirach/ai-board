@@ -65,6 +65,7 @@ const Boardroom = () => {
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
   const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize welcome message when board is loaded
@@ -143,10 +144,13 @@ const Boardroom = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !board || isGeneratingResponse) return;
+  if (!newMessage.trim() || !board || isGeneratingResponse) return;
 
-    // Create conversation if this is the first message
-    if (!currentConversationId && messages.length <= 1) {
+  // Determine selected persona IDs before use
+  const selectedPersonaIds = selectedAdvisors.length > 0 ? selectedAdvisors : undefined;
+
+  // Create conversation if this is the first message
+  if (!currentConversationId && messages.length <= 1) {
       try {
         const conversationResponse = await conversations.create({
           title: `Boardroom Discussion - ${new Date().toLocaleDateString()}`,
@@ -190,8 +194,6 @@ const Boardroom = () => {
       setMessages(prev => [...prev, ...optimisticPlaceholders]);
 
       // Generate AI responses from the board personas
-      const selectedPersonaIds = selectedAdvisors.length > 0 ? selectedAdvisors : undefined;
-      
       const response = await ai.generateResponse(board.id, {
         message: currentMessage,
         conversationId: currentConversationId || undefined,
@@ -307,6 +309,17 @@ const Boardroom = () => {
               <p className="text-sm text-muted-foreground">Your Executive Advisory Session</p>
             </div>
           </div>
+          {/* Persistent Summary Button in Header */}
+          <div>
+            <ConversationSummaryDialog
+              conversationId={currentConversationId || ""}
+              conversationTitle={board?.name ? `${board.name} Discussion` : "Boardroom Discussion"}
+              boardName={board?.name || ""}
+              messageCount={messages.length}
+              participants={board?.personas?.map(p => p.name) || []}
+              forceButtonLabel="View & Export Summary"
+            />
+          </div>
         </div>
       </div>
 
@@ -418,18 +431,16 @@ const Boardroom = () => {
           </div>
 
           <Separator className="my-4" />
-          
-          {/* Summary Section */}
-          <div className="space-y-2">
-            {messages.length > 1 && (
-              <ConversationSummaryDialog
-                conversationId={currentConversationId || ""}
-                conversationTitle={board?.name ? `${board.name} Discussion` : "Boardroom Discussion"}
-                boardName={board?.name || ""}
-                messageCount={messages.length}
-                participants={board?.personas?.map(p => p.name) || []}
-              />
-            )}
+          {/* Persistent Summary Button */}
+          <div className="flex justify-end mb-2">
+            <ConversationSummaryDialog
+              conversationId={currentConversationId || ""}
+              conversationTitle={board?.name ? `${board.name} Discussion` : "Boardroom Discussion"}
+              boardName={board?.name || ""}
+              messageCount={messages.length}
+              participants={board?.personas?.map(p => p.name) || []}
+              forceButtonLabel="View & Export Summary"
+            />
           </div>
         </div>
 

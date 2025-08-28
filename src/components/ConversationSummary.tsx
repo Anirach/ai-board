@@ -42,6 +42,7 @@ interface ConversationSummaryProps {
   boardName: string;
   messageCount: number;
   participants: string[];
+  forceButtonLabel?: string; // Optional custom button label
 }
 
 const ConversationSummaryDialog: React.FC<ConversationSummaryProps> = ({
@@ -49,7 +50,8 @@ const ConversationSummaryDialog: React.FC<ConversationSummaryProps> = ({
   conversationTitle,
   boardName,
   messageCount,
-  participants
+  participants,
+  forceButtonLabel
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -81,7 +83,22 @@ const ConversationSummaryDialog: React.FC<ConversationSummaryProps> = ({
     setIsGenerating(true);
     try {
       const response = await ai.generateSummary(conversationId, summaryFormat);
-      setSummary(response.data.data);  // Extracting data from the nested response
+      // Use response.data if it has summary, else response.data.data
+      // Prefer response.data if it has summary, else response.data.data
+      if (response.data && response.data.data) {
+        setSummary(response.data.data);
+      } else if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'summary' in response.data &&
+        'conversationId' in response.data &&
+        'conversationTitle' in response.data &&
+        'boardName' in response.data
+      ) {
+        setSummary(response.data as ConversationSummary);
+      } else {
+        // No valid summary found
+      }
       toast({
         title: "Summary Generated",
         description: "AI summary has been generated successfully",
@@ -280,9 +297,9 @@ const ConversationSummaryDialog: React.FC<ConversationSummaryProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+        <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => setIsOpen(true)}>
           <FileText className="h-4 w-4" />
-          Generate Summary
+          {forceButtonLabel ? forceButtonLabel : 'Generate Summary'}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -375,41 +392,54 @@ const ConversationSummaryDialog: React.FC<ConversationSummaryProps> = ({
                   className="min-h-[300px] resize-none"
                 />
               </div>
-              
-              {/* Export Buttons */}
-              <div className="flex gap-2">
-                <Button 
-                  onClick={exportToPDF}
-                  disabled={isExporting}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {isExporting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4 mr-2" />
-                  )}
-                  Export PDF
-                </Button>
-                <Button 
-                  onClick={exportToWord}
-                  disabled={isExporting}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {isExporting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Export Word
-                </Button>
-              </div>
             </div>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2">
+          {/* View & Download Buttons bottom left */}
+          {summary ? (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  const win = window.open();
+                  if (win) {
+                    win.document.write(`<pre style='white-space:pre-wrap;font-family:inherit;padding:2em;'>${summary.summary.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`);
+                    win.document.title = 'Conversation Summary';
+                  }
+                }}
+                variant="secondary"
+              >
+                View
+              </Button>
+              <Button 
+                onClick={exportToPDF}
+                disabled={isExporting}
+                variant="outline"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4 mr-2" />
+                )}
+                Download PDF
+              </Button>
+              <Button 
+                onClick={exportToWord}
+                disabled={isExporting}
+                variant="outline"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Download Word
+              </Button>
+            </div>
+          ) : (
+            <div className="text-xs text-red-600">[Debug] No summary data available. Buttons hidden. Check API response and summary state.</div>
+          )}
           <Button variant="secondary" onClick={() => setIsOpen(false)}>
             Close
           </Button>
