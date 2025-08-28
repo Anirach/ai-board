@@ -810,10 +810,25 @@ export const generateAIResponse = async (req, res) => {
         : `${msg.persona?.name || 'Advisor'}: ${msg.content}`
     }));
 
+    // Deduplicate boardPersonas by persona ID to prevent duplicate advisor responses
+    const personaIdSet = new Set();
+    const dedupedBoardPersonas = [];
+    for (const bp of board.boardPersonas) {
+      if (!personaIdSet.has(bp.persona.id)) {
+        personaIdSet.add(bp.persona.id);
+        dedupedBoardPersonas.push(bp);
+      }
+    }
+
+    // Deduplicate selectedPersonaIds to prevent duplicate responses
+    let uniquePersonaIds = selectedPersonaIds && Array.isArray(selectedPersonaIds)
+      ? Array.from(new Set(selectedPersonaIds))
+      : undefined;
+
     // Filter personas to respond (either selected ones or all if none specified)
-    const personasToRespond = selectedPersonaIds && selectedPersonaIds.length > 0
-      ? board.boardPersonas.filter(bp => selectedPersonaIds.includes(bp.persona.id))
-      : board.boardPersonas.slice(0, 3); // Limit to 3 personas for performance
+    const personasToRespond = uniquePersonaIds && uniquePersonaIds.length > 0
+      ? dedupedBoardPersonas.filter(bp => uniquePersonaIds.includes(bp.persona.id))
+      : dedupedBoardPersonas.slice(0, 3); // Limit to 3 personas for performance
 
     const responses = [];
 
@@ -846,16 +861,38 @@ export const generateAIResponse = async (req, res) => {
 
         const aiResponse = completion.choices[0]?.message?.content || "I'm thinking about your question...";
 
-        // Persist persona response as a message in the conversation
+        // Persist persona response as a message in the conversation, but prevent duplicates
         try {
-          await prisma.message.create({
-            data: {
-              content: aiResponse,
-              type: 'PERSONA',
+          // Check if a persona message for this advisor and user message already exists
+          const lastUserMessage = await prisma.message.findFirst({
+            where: {
               conversationId: convId,
-              personaId: persona.id
+              type: 'USER'
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+
+          const existingPersonaMessage = await prisma.message.findFirst({
+            where: {
+              conversationId: convId,
+              type: 'PERSONA',
+              personaId: persona.id,
+              content: aiResponse,
+              // Only consider messages created after the last user message
+              ...(lastUserMessage && { createdAt: { gte: lastUserMessage.createdAt } })
             }
           });
+
+          if (!existingPersonaMessage) {
+            await prisma.message.create({
+              data: {
+                content: aiResponse,
+                type: 'PERSONA',
+                conversationId: convId,
+                personaId: persona.id
+              }
+            });
+          }
         } catch (persistErr) {
           console.error('Failed to persist persona message:', persistErr);
         }
@@ -876,10 +913,20 @@ export const generateAIResponse = async (req, res) => {
       }
     }
 
+    // Filter responses to ensure only one per personaId
+    const seenPersonaIds = new Set();
+    const uniqueResponses = [];
+    for (const resp of responses) {
+      if (!seenPersonaIds.has(resp.personaId)) {
+        seenPersonaIds.add(resp.personaId);
+        uniqueResponses.push(resp);
+      }
+    }
+
     res.json({
-  success: true,
-  message: 'AI responses generated successfully',
-  data: { responses, conversationId: convId }
+      success: true,
+      message: 'AI responses generated successfully',
+      data: { responses: uniqueResponses, conversationId: convId }
     });
 
   } catch (error) {

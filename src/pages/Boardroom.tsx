@@ -181,16 +181,20 @@ const Boardroom = () => {
     setIsGeneratingResponse(true);
 
     try {
-      // Optimistic UI: insert placeholder AI messages immediately
-      const optimisticPlaceholders: Message[] = (board?.personas || []).filter(p => selectedPersonaIds?.includes(p.id) || !selectedPersonaIds).slice(0,3).map((p, i) => ({
-        id: `optimistic-${Date.now()}-${i}`,
-        sender: p.name,
-        avatar: p.name.split(' ').map(n => n[0]).join('').toUpperCase(),
-        content: '...',
-        timestamp: new Date().toLocaleTimeString(),
-        pending: true
-      }));
-
+      // Optimistic UI: insert placeholder AI messages immediately (one per selected persona, no duplicates)
+      const personaIds = (board?.personas || []).filter(p => selectedPersonaIds?.includes(p.id) || !selectedPersonaIds).map(p => p.id);
+      const uniquePersonaIds = Array.from(new Set(personaIds));
+      const optimisticPlaceholders: Message[] = uniquePersonaIds.slice(0,3).map((id, i) => {
+        const p = (board?.personas || []).find(p => p.id === id);
+        return p ? {
+          id: `optimistic-${Date.now()}-${i}`,
+          sender: p.name,
+          avatar: p.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+          content: '...',
+          timestamp: new Date().toLocaleTimeString(),
+          pending: true
+        } : null;
+      }).filter(Boolean) as Message[];
       setMessages(prev => [...prev, ...optimisticPlaceholders]);
 
       // Generate AI responses from the board personas
@@ -225,8 +229,14 @@ const Boardroom = () => {
           }
         }
 
-        // Replace optimistic placeholders with actual AI responses
-        const aiMessages: Message[] = response.data.responses.map((res, index) => ({
+        // Replace optimistic placeholders with actual AI responses, filtering duplicates by personaName AND response content
+        const seen = new Set<string>();
+        const aiMessages: Message[] = response.data.responses.filter(res => {
+          const key = res.personaName + '::' + res.response;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        }).map((res, index) => ({
           id: `ai-${Date.now()}-${index}`,
           sender: res.personaName,
           avatar: res.personaName.split(' ').map(n => n[0]).join('').toUpperCase(),
@@ -448,24 +458,34 @@ const Boardroom = () => {
         <div className="flex-1 flex flex-col min-w-0 h-full">
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-            {messages.map((message) => (
-              <div key={message.id} className="flex gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs font-medium">
-                    {message.avatar}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{message.sender}</span>
-                    <span className="text-xs text-muted-foreground">{message.timestamp}</span>
-                  </div>
-                  <div className="text-sm bg-muted p-3 rounded-lg">
-                    {message.content}
+            {/* Deduplicate advisor messages with same sender and content */}
+            {(() => {
+              const seen = new Set();
+              return messages.filter(m => {
+                if (m.sender === 'You' || m.sender === 'System') return true;
+                const key = m.sender + '::' + m.content;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              }).map((message) => (
+                <div key={message.id} className="flex gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs font-medium">
+                      {message.avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-sm">{message.sender}</span>
+                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                    </div>
+                    <div className="text-sm bg-muted p-3 rounded-lg">
+                      {message.content}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ));
+            })()}
             <div ref={messagesEndRef} />
           </div>
 
