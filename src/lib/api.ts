@@ -23,6 +23,7 @@ export interface Persona {
   description: string;
   avatar?: string;
   isPreset: boolean;
+  userId?: string | null;
   createdAt: string;
 }
 

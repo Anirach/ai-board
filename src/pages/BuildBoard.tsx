@@ -57,21 +57,15 @@ const BuildBoard = () => {
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
-  // Helper function to categorize personas
-  const categorizePersonas = (personas: Persona[]) => {
-    const executiveRoles = personas?.filter(p => 
-      p.role.includes('CEO') || p.role.includes('CTO') || p.role.includes('CFO') || 
-      p.role.includes('CMO') || p.role.includes('CPO') || p.role.includes('COO')
-    ) || [];
-    
-    const iconicLeaders = personas?.filter(p => 
-      !executiveRoles.some(exec => exec.id === p.id)
-    ) || [];
-    
-    return { executiveRoles, iconicLeaders };
-  };
 
-  const { executiveRoles, iconicLeaders } = categorizePersonas(personas || []);
+  // Tab state: 'legendary', 'system', 'custom'
+  const [activeTab, setActiveTab] = useState<'legendary' | 'system' | 'custom'>('legendary');
+
+  // Categorize personas for tabs
+  const legendaryPersonas = (personas || []).filter(p => p.isPreset && p.role && !p.role.startsWith('Chief '));
+  const systemPersonas = (personas || []).filter(p => p.isPreset && p.role && p.role.startsWith('Chief '));
+  // Show only current user's custom personas
+  const customPersonas = (personas || []).filter(p => !p.isPreset && p.userId === user?.id);
 
   // Auto-generate board name when personas are selected
   useEffect(() => {
@@ -494,215 +488,260 @@ const BuildBoard = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Iconic Leaders Section */}
+
+            {/* Persona Selection Tabs */}
             <section>
               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-5 w-5 text-yellow-500" />
-                    <h2 className="text-xl font-semibold">Choose from Iconic Leaders</h2>
-                  </div>
-                  <p className="text-muted-foreground">Click to view details, Shift+click to select for your board</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant={activeTab === 'legendary' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('legendary')}
+                  >
+                    <Star className="h-4 w-4 mr-1 text-yellow-500" /> Legendary
+                  </Button>
+                  <Button
+                    variant={activeTab === 'system' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('system')}
+                  >
+                    <Users className="h-4 w-4 mr-1 text-blue-500" /> System
+                  </Button>
+                  <Button
+                    variant={activeTab === 'custom' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('custom')}
+                  >
+                    <Plus className="h-4 w-4 mr-1 text-green-500" /> Custom
+                  </Button>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant={isAdminMode ? "default" : "outline"}
+                  <Button
+                    variant={isAdminMode ? 'default' : 'outline'}
                     onClick={() => setIsAdminMode(!isAdminMode)}
                   >
-                    <Settings className="h-4 w-4" />
-                    Admin
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowCustomForm(!showCustomForm)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Custom
+                    <Settings className="h-4 w-4" /> Admin
                   </Button>
                 </div>
               </div>
 
+              {/* Tab Content */}
               <div className="grid md:grid-cols-2 gap-4">
-                {iconicLeaders?.map((persona) => {
-                  // Use the same icon mapping as PersonaLibrary
-                  const iconMap = {
-                    "Steve Jobs": Brain,
-                    "Warren Buffett": Target,
-                    "Oprah Winfrey": Star,
-                    "Sun Tzu": Shield,
-                    "Nelson Mandela": Users,
-                    "Marie Curie": Brain,
-                  };
-                  const IconComponent = iconMap[persona.name] || Star;
-                  // Map specific roles to badge color
-                  const roleColorMap: Record<string, string> = {
-                    'Innovation Catalyst': 'bg-purple-100 text-purple-700',
-                    'Value Investor': 'bg-blue-100 text-blue-700',
-                    'Empathy Leader': 'bg-green-100 text-green-700',
-                    'Strategic Warrior': 'bg-blue-100 text-blue-700',
-                    'Ethical Compass': 'bg-amber-100 text-amber-700',
-                    'Research Pioneer': 'bg-purple-100 text-purple-700',
-                    'Chief Executive Officer': 'bg-blue-100 text-blue-700',
-                    'Chief Technology Officer': 'bg-purple-100 text-purple-700',
-                    'Chief Financial Officer': 'bg-amber-100 text-amber-700',
-                    'Chief Marketing Officer': 'bg-pink-100 text-pink-700',
-                    'Chief Product Officer': 'bg-green-100 text-green-700',
-                    'Chief Operating Officer': 'bg-gray-100 text-gray-700',
-                  };
-                  // Fallback for any 'Chief ... Officer' not explicitly listed
-                  const roleColor =
-                    roleColorMap[persona.role] ||
-                    (persona.role?.startsWith('Chief ') ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700');
-                  return (
-                    <Card
-                      key={persona.id}
-                      className={`p-6 bg-white rounded-2xl border transition-shadow duration-200 ${
-                        isSelected(persona.id)
-                          ? 'border-[#1A2B49] ring-2 ring-[#1A2B49] shadow-none'
-                          : 'border-gray-200 hover:shadow-md'
-                      } ${isAdminMode ? '' : 'cursor-pointer'}`}
-                      onClick={(e) => {
-                        // Ignore clicks on the button
-                        if ((e.target as HTMLElement).closest('button')) return;
-                        if (isAdminMode) {
-                          handleEditPersona(persona);
-                        } else {
-                          setSelectedPersonaDetail(persona);
-                        }
-                      }}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gray-100">
-                            <IconComponent className="h-6 w-6 text-gray-700" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-[1.15rem] text-gray-900 leading-tight">{persona.name}</h3>
-                            <p className="text-[0.98rem] text-gray-500 leading-tight">{persona.role}</p>
-                          </div>
-                        </div>
-                        <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${roleColor}`}>{persona.role}</span>
-                      </div>
-                      <div className="text-gray-700 text-[0.98rem] mb-4 leading-snug">{persona.description}</div>
-                      <div className="mb-2">
-                        <span className="block text-xs font-bold text-gray-800 mb-1">Expertise:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {persona.expertise.map((skill) => (
-                            <span
-                              key={skill}
-                              className="text-sm font-semibold bg-gray-100 text-gray-800 px-3 py-1.5 rounded-full"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mb-6">
-                        <span className="block text-xs font-bold text-gray-800 mb-1">Personality:</span>
-                        <span className="text-sm text-gray-400">{persona.personality}</span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          togglePersona(persona.id);
-                        }}
-                        className={`w-full flex items-center justify-center gap-2 text-base px-3 py-2 rounded-lg border font-medium mt-4
-                          ${isSelected(persona.id)
-                            ? 'bg-[#1A2B49] text-white border-[#1A2B49]'
-                            : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'}
-                        `}
-                      >
-                        <Plus className={`h-5 w-5 mr-1 ${isSelected(persona.id) ? 'text-white' : 'text-primary'}`} />
-                        <span>{isSelected(persona.id) ? 'Added to Board' : 'Add to Board'}</span>
-                      </button>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* Executive Roles Section */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-5 w-5 text-blue-500" />
-                    <h2 className="text-xl font-semibold">Choose from Executive Roles</h2>
-                  </div>
-                  <p className="text-muted-foreground">Click to view details, Shift+click to select for your board</p>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                {executiveRoles?.map((persona) => (
-                  <Card 
+                {activeTab === 'legendary' && legendaryPersonas.map((persona) => (
+                  <Card
                     key={persona.id}
-                    className={`${
-                      isAdminMode ? '' : 'cursor-pointer'
-                    } transition-smooth ${
-                      isSelected(persona.id) 
-                        ? 'ring-2 ring-primary shadow-glow' 
-                        : 'hover:shadow-card'
-                    }`}
-                    onClick={(e) => handlePersonaCardClick(persona, e)}
+                    className={`p-6 bg-white rounded-2xl border transition-shadow duration-200 ${
+                      isSelected(persona.id)
+                        ? 'border-[#1A2B49] ring-2 ring-[#1A2B49] shadow-none'
+                        : 'border-gray-200 hover:shadow-md'
+                    } ${isAdminMode ? '' : 'cursor-pointer'}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button')) return;
+                      if (isAdminMode) {
+                        handleEditPersona(persona);
+                      } else {
+                        setSelectedPersonaDetail(persona);
+                      }
+                    }}
                   >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-lg">{persona.name}</CardTitle>
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                              Executive
-                            </Badge>
-                          </div>
-                          <CardDescription>{persona.role}</CardDescription>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gray-100">
+                          <Star className="h-6 w-6 text-yellow-500" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          {isSelected(persona.id) && !isAdminMode && (
-                            <Badge variant="default">Selected</Badge>
-                          )}
-                          {isAdminMode && (!persona.isPreset || user?.isAdmin) && (
-                            <div className="flex gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleEditPersona(persona)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleDeletePersona(persona.id)}
-                                disabled={deletePersonaMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
+                        <div>
+                          <h3 className="font-bold text-[1.15rem] text-gray-900 leading-tight">{persona.name}</h3>
+                          <p className="text-[0.98rem] text-gray-500 leading-tight">{persona.role}</p>
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {persona.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">Legendary</span>
+                    </div>
+                    <div className="text-gray-700 text-[0.98rem] mb-4 leading-snug">{persona.description}</div>
+                    <div className="mb-2">
+                      <span className="block text-xs font-bold text-gray-800 mb-1">Expertise:</span>
+                      <div className="flex flex-wrap gap-2">
                         {persona.expertise.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-xs">
+                          <span
+                            key={skill}
+                            className="text-sm font-semibold bg-gray-100 text-gray-800 px-3 py-1.5 rounded-full"
+                          >
                             {skill}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
-                      {!isAdminMode && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Info className="h-3 w-3" />
-                          <span>Click for details • Shift+click to select</span>
-                        </div>
-                      )}
-                    </CardContent>
+                    </div>
+                    <div className="mb-6">
+                      <span className="block text-xs font-bold text-gray-800 mb-1">Personality:</span>
+                      <span className="text-sm text-gray-400">{persona.personality}</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        togglePersona(persona.id);
+                      }}
+                      className={`w-full flex items-center justify-center gap-2 text-base px-3 py-2 rounded-lg border font-medium mt-4
+                        ${isSelected(persona.id)
+                          ? 'bg-[#1A2B49] text-white border-[#1A2B49]'
+                          : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'}
+                      `}
+                    >
+                      <Plus className={`h-5 w-5 mr-1 ${isSelected(persona.id) ? 'text-white' : 'text-primary'}`} />
+                      <span>{isSelected(persona.id) ? 'Added to Board' : 'Add to Board'}</span>
+                    </button>
                   </Card>
                 ))}
+                {activeTab === 'system' && systemPersonas.map((persona) => (
+                  <Card
+                    key={persona.id}
+                    className={`p-6 bg-white rounded-2xl border transition-shadow duration-200 ${
+                      isSelected(persona.id)
+                        ? 'border-[#1A2B49] ring-2 ring-[#1A2B49] shadow-none'
+                        : 'border-gray-200 hover:shadow-md'
+                    } ${isAdminMode ? '' : 'cursor-pointer'}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button')) return;
+                      if (isAdminMode) {
+                        handleEditPersona(persona);
+                      } else {
+                        setSelectedPersonaDetail(persona);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gray-100">
+                          <Users className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-[1.15rem] text-gray-900 leading-tight">{persona.name}</h3>
+                          <p className="text-[0.98rem] text-gray-500 leading-tight">{persona.role}</p>
+                        </div>
+                      </div>
+                      <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 text-blue-700">System</span>
+                    </div>
+                    <div className="text-gray-700 text-[0.98rem] mb-4 leading-snug">{persona.description}</div>
+                    <div className="mb-2">
+                      <span className="block text-xs font-bold text-gray-800 mb-1">Expertise:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {persona.expertise.map((skill) => (
+                          <span
+                            key={skill}
+                            className="text-sm font-semibold bg-gray-100 text-gray-800 px-3 py-1.5 rounded-full"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mb-6">
+                      <span className="block text-xs font-bold text-gray-800 mb-1">Personality:</span>
+                      <span className="text-sm text-gray-400">{persona.personality}</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        togglePersona(persona.id);
+                      }}
+                      className={`w-full flex items-center justify-center gap-2 text-base px-3 py-2 rounded-lg border font-medium mt-4
+                        ${isSelected(persona.id)
+                          ? 'bg-[#1A2B49] text-white border-[#1A2B49]'
+                          : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'}
+                      `}
+                    >
+                      <Plus className={`h-5 w-5 mr-1 ${isSelected(persona.id) ? 'text-white' : 'text-primary'}`} />
+                      <span>{isSelected(persona.id) ? 'Added to Board' : 'Add to Board'}</span>
+                    </button>
+                  </Card>
+                ))}
+                {activeTab === 'custom' && customPersonas.map((persona) => (
+                  <Card
+                    key={persona.id}
+                    className={`p-6 bg-white rounded-2xl border transition-shadow duration-200 ${
+                      isSelected(persona.id)
+                        ? 'border-[#1A2B49] ring-2 ring-[#1A2B49] shadow-none'
+                        : 'border-gray-200 hover:shadow-md'
+                    } ${isAdminMode ? '' : 'cursor-pointer'}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button')) return;
+                      if (isAdminMode) {
+                        handleEditPersona(persona);
+                      } else {
+                        setSelectedPersonaDetail(persona);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gray-100">
+                          <Plus className="h-6 w-6 text-green-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-[1.15rem] text-gray-900 leading-tight">{persona.name}</h3>
+                          <p className="text-[0.98rem] text-gray-500 leading-tight">{persona.role}</p>
+                        </div>
+                      </div>
+                      <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700">Custom</span>
+                    </div>
+                    <div className="text-gray-700 text-[0.98rem] mb-4 leading-snug">{persona.description}</div>
+                    <div className="mb-2">
+                      <span className="block text-xs font-bold text-gray-800 mb-1">Expertise:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {persona.expertise.map((skill) => (
+                          <span
+                            key={skill}
+                            className="text-sm font-semibold bg-gray-100 text-gray-800 px-3 py-1.5 rounded-full"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mb-6">
+                      <span className="block text-xs font-bold text-gray-800 mb-1">Personality:</span>
+                      <span className="text-sm text-gray-400">{persona.personality}</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        togglePersona(persona.id);
+                      }}
+                      className={`w-full flex items-center justify-center gap-2 text-base px-3 py-2 rounded-lg border font-medium mt-4
+                        ${isSelected(persona.id)
+                          ? 'bg-[#1A2B49] text-white border-[#1A2B49]'
+                          : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'}
+                      `}
+                    >
+                      <Plus className={`h-5 w-5 mr-1 ${isSelected(persona.id) ? 'text-white' : 'text-primary'}`} />
+                      <span>{isSelected(persona.id) ? 'Added to Board' : 'Add to Board'}</span>
+                    </button>
+                  </Card>
+                ))}
+                {activeTab === 'custom' && customPersonas.length === 0 && (
+                  <div className="col-span-2 text-center text-muted-foreground py-8">
+                    You have not created any custom personas yet.
+                  </div>
+                )}
+                {/* Create Persona Button at the bottom of each tab */}
+                <div className="col-span-2 flex justify-center mt-6">
+                  <Button
+                    className="px-8 py-3 text-lg font-semibold rounded-lg bg-[#1A2B49] text-white hover:bg-[#223366]"
+                    onClick={() => {
+                      // Set up the form for the correct persona type
+                      if (activeTab === 'legendary') {
+                        setCustomPersona({ name: '', role: '', expertise: '', mindset: '', personality: '', description: '', files: [] });
+                        setShowCustomForm('legendary');
+                      } else if (activeTab === 'system') {
+                        setCustomPersona({ name: '', role: 'Chief ', expertise: '', mindset: '', personality: '', description: '', files: [] });
+                        setShowCustomForm('system');
+                      } else {
+                        setCustomPersona({ name: '', role: '', expertise: '', mindset: '', personality: '', description: '', files: [] });
+                        setShowCustomForm('custom');
+                      }
+                    }}
+                  >
+                    {activeTab === 'legendary' && 'Create Legendary Persona'}
+                    {activeTab === 'system' && 'Create System Persona'}
+                    {activeTab === 'custom' && 'Create Custom Persona'}
+                    <Plus className="ml-2" />
+                  </Button>
+                </div>
               </div>
             </section>
 
@@ -847,6 +886,45 @@ const BuildBoard = () => {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         )}
                         Add to Board
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={createPersonaMutation.isPending}
+                        onClick={() => {
+                          // Save persona for later use (create but don't select)
+                          if (!customPersona.name || !customPersona.role) {
+                            toast({
+                              title: "Missing Information",
+                              description: "Please fill in at least the name and role fields",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          const expertise = customPersona.expertise 
+                            ? customPersona.expertise.split(",").map(s => s.trim()).filter(s => s.length > 0)
+                            : [];
+                          createPersonaMutation.mutate({
+                            name: customPersona.name,
+                            role: customPersona.role,
+                            expertise,
+                            mindset: customPersona.mindset || `Expert in ${customPersona.role} with deep understanding of ${expertise.join(", ")}.`,
+                            personality: customPersona.personality || "Professional, analytical, and collaborative approach to problem-solving.",
+                            description: customPersona.description || `Specialized ${customPersona.role} focused on ${expertise.join(", ")}.`,
+                          }, {
+                            onSuccess: () => {
+                              setShowCustomForm(false);
+                              setCustomPersona({ name: "", role: "", expertise: "", mindset: "", personality: "", description: "", files: [] });
+                              setUploadedFiles([]);
+                              toast({
+                                title: "Persona Saved",
+                                description: "Your custom persona has been saved for later use.",
+                              });
+                            }
+                          });
+                        }}
+                      >
+                        Save
                       </Button>
                       <Button 
                         type="button" 

@@ -2,8 +2,14 @@ import prisma from '../config/database.js';
 
 export const getAllPersonas = async (req, res) => {
   try {
+    // Allow filtering by isPreset and userId via query params
+    const { isPreset, userId } = req.query;
+    const where = {};
+    if (isPreset !== undefined) where.isPreset = isPreset === 'true';
+    if (userId) where.userId = userId;
+
     const personas = await prisma.persona.findMany({
-      where: { isPreset: true },
+      where,
       select: {
         id: true,
         name: true,
@@ -14,6 +20,7 @@ export const getAllPersonas = async (req, res) => {
         description: true,
         avatar: true,
         isPreset: true,
+        userId: true,
         createdAt: true
       },
       orderBy: { name: 'asc' }
@@ -111,7 +118,8 @@ export const createPersona = async (req, res) => {
         personality,
         description,
         avatar: avatar || null,
-        isPreset: false // Custom personas are not presets
+        isPreset: false, // Custom personas are not presets
+        userId: req.user?.id || null
       },
       select: {
         id: true,
@@ -123,6 +131,7 @@ export const createPersona = async (req, res) => {
         description: true,
         avatar: true,
         isPreset: true,
+        userId: true,
         createdAt: true
       }
     });

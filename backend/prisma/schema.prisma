@@ -27,6 +27,7 @@ model User {
   boards       Board[]
   conversations Conversation[]
   messages     Message[]
+  personas     Persona[]
 
   @@map("users")
 }
@@ -62,6 +63,8 @@ model Persona {
   updatedAt   DateTime @updatedAt
 
   // Relations
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   boardPersonas BoardPersona[]
   messages     Message[]
 
