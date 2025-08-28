@@ -431,23 +431,44 @@ const BuildBoard = () => {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <div className="flex items-center justify-between w-full mt-4">
+            {/* Delete button bottom left */}
             <Button 
-              onClick={handleSavePersona}
-              disabled={updatePersonaMutation.isPending}
+              variant="destructive"
+              className=""
+              onClick={async () => {
+                if (editingPersona && editingPersona.id) {
+                  await deletePersonaMutation.mutateAsync(editingPersona.id);
+                  setEditingPersona(null);
+                }
+              }}
+              disabled={deletePersonaMutation.isPending}
             >
-              {updatePersonaMutation.isPending && (
+              {deletePersonaMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
               )}
-              {!updatePersonaMutation.isPending && (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save changes
+              Delete
             </Button>
-            <Button variant="outline" onClick={() => setEditingPersona(null)}>
-              Cancel
-            </Button>
-          </DialogFooter>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setEditingPersona(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSavePersona}
+                disabled={updatePersonaMutation.isPending}
+              >
+                {updatePersonaMutation.isPending && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {!updatePersonaMutation.isPending && (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save changes
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     <div className="min-h-screen bg-background">
