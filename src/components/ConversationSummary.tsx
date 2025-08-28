@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import ReactMarkdown from 'react-markdown';
 import {
   Dialog,
   DialogContent,
@@ -386,11 +387,9 @@ const ConversationSummaryDialog: React.FC<ConversationSummaryProps> = ({
               <Separator />
               <div>
                 <h4 className="font-medium mb-2">Generated Summary</h4>
-                <Textarea 
-                  value={summary.summary}
-                  readOnly
-                  className="min-h-[300px] resize-none"
-                />
+                <div className="prose prose-neutral max-w-none min-h-[300px] bg-background p-4 rounded border border-border overflow-auto">
+                  <ReactMarkdown>{summary.summary}</ReactMarkdown>
+                </div>
               </div>
             </div>
           )}
