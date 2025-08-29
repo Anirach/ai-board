@@ -174,8 +174,9 @@ export const updatePersona = async (req, res) => {
       });
     }
 
-    // Only admins can update preset personas
-    if (existingPersona.isPreset && !(req.user && req.user.isAdmin)) {
+    // Only admins can update preset personas. Allow a dev-only override via header x-admin-override
+    const adminOverride = req.headers['x-admin-override'] === '1';
+    if (existingPersona.isPreset && !(req.user && req.user.isAdmin) && !(adminOverride && process.env.NODE_ENV !== 'production')) {
       return res.status(403).json({
         success: false,
         message: 'Cannot modify preset personas'
@@ -261,8 +262,9 @@ export const deletePersona = async (req, res) => {
       });
     }
 
-    // Don't allow deleting preset personas
-    if (existingPersona.isPreset) {
+    // Don't allow deleting preset personas unless admin or dev override header present
+    const adminOverride = req.headers['x-admin-override'] === '1';
+    if (existingPersona.isPreset && !(req.user && req.user.isAdmin) && !(adminOverride && process.env.NODE_ENV !== 'production')) {
       return res.status(403).json({
         success: false,
         message: 'Cannot delete preset personas'

@@ -79,7 +79,7 @@ export const useUpdatePersona = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, data }: {
+    mutationFn: async ({ id, data, adminOverride }: {
       id: string;
       data: Partial<{
         name: string;
@@ -89,9 +89,10 @@ export const useUpdatePersona = () => {
         personality: string;
         description: string;
         avatar?: string;
-      }>;
+      }>; 
+      adminOverride?: boolean;
     }) => {
-      const response = await personas.update(id, data);
+      const response = await personas.update(id, data, { adminOverride });
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to update persona');
       }

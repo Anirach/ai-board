@@ -120,24 +120,37 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    extraHeaders: Record<string, string> = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
+    const headers = this.getHeaders();
+    Object.entries(extraHeaders).forEach(([k, v]) => headers.set(k, v));
+
     const config: RequestInit = {
-      headers: this.getHeaders(),
+      headers,
       ...options,
     };
 
     try {
       const response = await fetch(url, config);
-      const data: ApiResponse<T> = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      let data: ApiResponse<T> | null = null;
+      try {
+        data = await response.json();
+      } catch (e) {
+        // Non-JSON response
+        data = null;
       }
 
-      return data;
+      if (!response.ok) {
+        const msg = data?.message || `HTTP error! status: ${response.status}`;
+        const details = data?.errors ? ` | errors: ${JSON.stringify(data.errors)}` : '';
+        const err = new Error(msg + details);
+        throw err;
+      }
+
+      return data as ApiResponse<T>;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -237,11 +250,11 @@ class ApiClient {
     personality: string;
     description: string;
     avatar?: string;
-  }>) {
+  }>, extraHeaders: Record<string,string> = {}) {
     return this.request<{ persona: Persona }>(`/personas/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
-    });
+    }, extraHeaders);
   }
 
   async deletePersona(id: string) {
@@ -490,7 +503,8 @@ export const personas = {
   getAll: () => apiClient.getPersonas(),
   get: (id: string) => apiClient.getPersona(id),
   create: (data: Parameters<typeof apiClient.createPersona>[0]) => apiClient.createPersona(data),
-  update: (id: string, data: Parameters<typeof apiClient.updatePersona>[1]) => apiClient.updatePersona(id, data),
+  update: (id: string, data: Parameters<typeof apiClient.updatePersona>[1], options?: { adminOverride?: boolean }) =>
+    apiClient.updatePersona(id, data, options?.adminOverride ? { 'x-admin-override': '1' } : {}),
   delete: (id: string) => apiClient.deletePersona(id),
 };
 

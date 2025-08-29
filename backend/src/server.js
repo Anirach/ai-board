@@ -44,7 +44,8 @@ app.use(cors({
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  // Allow custom header used for dev admin override
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-override']
 }));
 
 // Body parsing middleware

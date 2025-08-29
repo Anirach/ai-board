@@ -176,7 +176,8 @@ const BuildBoard = () => {
     }
     const payload = {
       id: editingPersona.id,
-      data
+      data,
+      adminOverride: isAdminMode
     };
     console.log('UPDATE PERSONA PAYLOAD:', payload);
     updatePersonaMutation.mutate(payload, {
@@ -240,14 +241,45 @@ const BuildBoard = () => {
     const expertise = customPersona.expertise 
       ? customPersona.expertise.split(",").map(s => s.trim()).filter(s => s.length > 0)
       : [];
-    
+    // Ensure at least one expertise item to satisfy server validation
+    const expertiseFinal = expertise.length > 0 ? expertise : [(customPersona.role || 'General')];
+
+    // Client-side validation to mirror server constraints
+    if (!customPersona.name || customPersona.name.length > 100) {
+      toast({ title: 'Invalid name', description: 'Name is required and must be <= 100 characters', variant: 'destructive' });
+      return;
+    }
+    if (!customPersona.role || customPersona.role.length > 100) {
+      toast({ title: 'Invalid role', description: 'Role is required and must be <= 100 characters', variant: 'destructive' });
+      return;
+    }
+    if (expertiseFinal.length === 0) {
+      toast({ title: 'Invalid expertise', description: 'Please provide at least one expertise', variant: 'destructive' });
+      return;
+    }
+    const mindsetText = customPersona.mindset || `Expert in ${customPersona.role} with deep understanding of ${expertiseFinal.join(", ")}.`;
+    const personalityText = customPersona.personality || "Professional, analytical, and collaborative approach to problem-solving.";
+    const descriptionText = customPersona.description || `Specialized ${customPersona.role} focused on ${expertiseFinal.join(", ")}.`;
+    if (mindsetText.length < 10) {
+      toast({ title: 'Invalid mindset', description: 'Mindset must be at least 10 characters', variant: 'destructive' });
+      return;
+    }
+    if (personalityText.length < 10) {
+      toast({ title: 'Invalid personality', description: 'Personality must be at least 10 characters', variant: 'destructive' });
+      return;
+    }
+    if (descriptionText.length < 10) {
+      toast({ title: 'Invalid description', description: 'Description must be at least 10 characters', variant: 'destructive' });
+      return;
+    }
+
     createPersonaMutation.mutate({
       name: customPersona.name,
       role: customPersona.role,
-      expertise,
-      mindset: customPersona.mindset || `Expert in ${customPersona.role} with deep understanding of ${expertise.join(", ")}.`,
-      personality: customPersona.personality || "Professional, analytical, and collaborative approach to problem-solving.",
-      description: customPersona.description || `Specialized ${customPersona.role} focused on ${expertise.join(", ")}.`,
+      expertise: expertiseFinal,
+      mindset: mindsetText,
+      personality: personalityText,
+      description: descriptionText,
     }, {
       onSuccess: () => {
         setShowCustomForm(false);
@@ -904,13 +936,31 @@ const BuildBoard = () => {
                           const expertise = customPersona.expertise 
                             ? customPersona.expertise.split(",").map(s => s.trim()).filter(s => s.length > 0)
                             : [];
+                          const expertiseFinal = expertise.length > 0 ? expertise : [(customPersona.role || 'General')];
+
+                          // Client-side validation (same as above)
+                          if (!customPersona.name || customPersona.name.length > 100) {
+                            toast({ title: 'Invalid name', description: 'Name is required and must be <= 100 characters', variant: 'destructive' });
+                            return;
+                          }
+                          if (!customPersona.role || customPersona.role.length > 100) {
+                            toast({ title: 'Invalid role', description: 'Role is required and must be <= 100 characters', variant: 'destructive' });
+                            return;
+                          }
+                          const mindsetText2 = customPersona.mindset || `Expert in ${customPersona.role} with deep understanding of ${expertiseFinal.join(", ")}.`;
+                          const personalityText2 = customPersona.personality || "Professional, analytical, and collaborative approach to problem-solving.";
+                          const descriptionText2 = customPersona.description || `Specialized ${customPersona.role} focused on ${expertiseFinal.join(", ")}.`;
+                          if (mindsetText2.length < 10 || personalityText2.length < 10 || descriptionText2.length < 10) {
+                            toast({ title: 'Invalid fields', description: 'Mindset, personality, and description must be at least 10 characters each', variant: 'destructive' });
+                            return;
+                          }
                           createPersonaMutation.mutate({
                             name: customPersona.name,
                             role: customPersona.role,
-                            expertise,
-                            mindset: customPersona.mindset || `Expert in ${customPersona.role} with deep understanding of ${expertise.join(", ")}.`,
-                            personality: customPersona.personality || "Professional, analytical, and collaborative approach to problem-solving.",
-                            description: customPersona.description || `Specialized ${customPersona.role} focused on ${expertise.join(", ")}.`,
+                            expertise: expertiseFinal,
+                            mindset: mindsetText2,
+                            personality: personalityText2,
+                            description: descriptionText2,
                           }, {
                             onSuccess: () => {
                               setShowCustomForm(false);
