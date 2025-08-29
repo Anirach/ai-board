@@ -149,7 +149,8 @@ const BuildBoard = () => {
   };
 
   const handleEditPersona = (persona: Persona) => {
-    if (persona.isPreset && !user?.isAdmin) {
+    // Allow editing if user is admin OR local Admin toggle is enabled (isAdminMode)
+    if (persona.isPreset && !(user?.isAdmin || isAdminMode)) {
       toast({
         title: "Cannot Edit",
         description: "Only admins can modify preset personas",
@@ -162,7 +163,7 @@ const BuildBoard = () => {
 
   const handleSavePersona = () => {
     if (!editingPersona) return;
-    const data: any = {
+  const data: Partial<Persona> = {
       name: editingPersona.name,
       role: editingPersona.role,
       expertise: editingPersona.expertise,
@@ -187,7 +188,8 @@ const BuildBoard = () => {
 
   const handleDeletePersona = (personaId: string) => {
     const persona = personas?.find(p => p.id === personaId);
-    if (persona?.isPreset && !user?.isAdmin) {
+    // Allow deletion if user is admin OR local Admin toggle is enabled (isAdminMode)
+    if (persona?.isPreset && !(user?.isAdmin || isAdminMode)) {
       toast({
         title: "Cannot Delete",
         description: "Only admins can delete preset personas",
@@ -726,14 +728,12 @@ const BuildBoard = () => {
                       // Set up the form for the correct persona type
                       if (activeTab === 'legendary') {
                         setCustomPersona({ name: '', role: '', expertise: '', mindset: '', personality: '', description: '', files: [] });
-                        setShowCustomForm('legendary');
                       } else if (activeTab === 'system') {
                         setCustomPersona({ name: '', role: 'Chief ', expertise: '', mindset: '', personality: '', description: '', files: [] });
-                        setShowCustomForm('system');
                       } else {
                         setCustomPersona({ name: '', role: '', expertise: '', mindset: '', personality: '', description: '', files: [] });
-                        setShowCustomForm('custom');
                       }
+                      setShowCustomForm(true);
                     }}
                   >
                     {activeTab === 'legendary' && 'Create Legendary Persona'}
@@ -1067,11 +1067,11 @@ const BuildBoard = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <DialogTitle className="text-2xl">{selectedPersonaDetail.name}</DialogTitle>
                   <Badge variant="outline" className={`text-xs ${
-                    iconicLeaders.some(p => p.id === selectedPersonaDetail.id) 
+                    legendaryPersonas.some(p => p.id === selectedPersonaDetail.id) 
                       ? 'bg-yellow-50 text-yellow-700 border-yellow-200' 
                       : 'bg-blue-50 text-blue-700 border-blue-200'
                   }`}>
-                    {iconicLeaders.some(p => p.id === selectedPersonaDetail.id) ? 'Legendary' : 'Executive'}
+                    {legendaryPersonas.some(p => p.id === selectedPersonaDetail.id) ? 'Legendary' : 'Executive'}
                   </Badge>
                 </div>
                 <DialogDescription className="text-lg text-foreground">
